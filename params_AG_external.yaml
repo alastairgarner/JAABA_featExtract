@@ -1,0 +1,43 @@
+directories: 
+  master: /home/alastair/OneDrive/projects/JAABA_featExtract
+  code: ./code
+  data: /media/alastair/Alastair_EH/Pipeline
+  dataprocessed: ./data_processed
+  data_compiled: /media/alastair/Alastair_EH/Pipeline/data_compiled 
+  chore_input: /media/alastair/Alastair_EH/Pipeline/raw_input
+  chore_output: /media/alastair/Alastair_EH/Pipeline/choreography_results
+  jaaba: 
+  jb: 
+  salam: /media/alastair/Alastair_EH/Pipeline/feature_extraction_alastair
+  choreJar_file: ./packages/choreography/Chore.jar
+  JAABAclassifiers: ./packages/JAABA/classifiers
+  JAABAcore: ./code/JAABA
+filetypes:
+  blobs: .blob*
+  choreography_txt: compiledChore.txt
+  choreography_dat: .dat
+  salam: animal_stats*.txt
+  jaaba: [trx.mat, scores*short.mat]
+  jb: trx.mat
+config_choreography:
+  features: [x, y, speed, midline, curve, cast, crabspeed, area, bias, kink, dir, morpwidth, spine, outline, speed085]
+  pval: 0.088
+  choreLoc: ./packages/choreography/Chore.jar
+  M: 1.0
+  t: 5.0
+  s: 0.1
+  runQuiet: false
+  overwrite: false
+config_JAABA: 
+  classifier: roll_beg_short.jab
+  overwrite: false
+choreography_default:
+  feature_names: [x, y, speed, midline, curve, cast, crabspeed, area, bias, kink, dir, morpwidth, spine, outline, speed085]
+  feature_codes: [x, y, s, m, c, c, r, e, b, k, d, M, S, O, s(085)]
+tracker: 
+  resolution: 1200.0 
+  smoothenWindowWidth: 0.1
+  smoothenPolynomialOrder: 2.0
+  npointsAverage: 9.0
+  numberSpinePoints: 11.0
+  pointsHeadTailAverage: 0.1

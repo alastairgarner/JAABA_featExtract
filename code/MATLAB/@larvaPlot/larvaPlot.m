@@ -25,6 +25,8 @@ classdef larvaPlot
         protocol4
         rig
         
+        data
+        
         mwt
         chore
         salam
@@ -63,11 +65,55 @@ classdef larvaPlot
                 fprintf('\n Bad Struct \n');
             end
         end
+        
         %%
         function obj = compile_alldata(obj,dStruct)
             obj.salam = larvaPlot.compile_salam(dStruct);
             obj.jaaba = larvaPlot.compile_jaaba(dStruct);
             obj.jb = larvaPlot.compile_jb(dStruct);
+        end
+        
+        %%
+        function [ts_tracked,uniIDs] = get_tracked(obj,pipeline,behaviour)
+            temp = obj.(pipeline{:});
+            bins = 0:.2:max(ceil(temp.tEnd));
+            flt = ~isnan(temp.tStart);
+
+            aniIDs = temp.aniID(flt);
+            uniIDs = 1:length(aniIDs);
+            [binStart,~] = discretize(temp.tStart(flt),bins);
+            [binEnd,~] = discretize(temp.tEnd(flt),bins);
+
+            spStart = sparse(uniIDs',binStart',[1],max(uniIDs),length(bins));
+            spEnd = sparse(uniIDs',binEnd',[-1],max(uniIDs),length(bins));
+            spBoth = cumsum((spStart+spEnd),2);
+            ts_tracked = full(sum(spBoth,1));
+        end
+        
+        %%
+        function [ts_behaved,uniIDs] = get_behaved(obj,pipeline,behaviour)
+            temp = obj.(pipeline{:});
+            bins = 0:.2:max(ceil(temp.tEnd));
+            flt = ~isnan(temp.tStart);
+
+            aniIDs = temp.aniID(flt);
+            uniIDs = 1:length(aniIDs);
+
+            temp = obj.(pipeline{:}).(behaviour{:});
+            counts = cellfun(@length,temp.bStart);
+            uniIDs = repelem(uniIDs,counts(flt));
+            bStart = [temp.bStart{flt}];
+            bEnd = [temp.bEnd{flt}];
+
+            flt = ~isnan(bStart);    
+            uniIDs = uniIDs(flt);
+            [binStart,~] = discretize(bStart(flt),bins);
+            [binEnd,~] = discretize(bEnd(flt),bins);
+
+            spStart = sparse(uniIDs',binStart',[1],max(uniIDs),length(bins));
+            spEnd = sparse(uniIDs',binEnd',[-1],max(uniIDs),length(bins));
+            spBoth = cumsum((spStart+spEnd),2);
+            ts_behaved = full(sum(spBoth,1));
         end
         
     end
@@ -78,6 +124,12 @@ classdef larvaPlot
         
         %%
         function salam_data = compile_salam(dataStruct)
+            if isempty(dataStruct.data_featextract)
+                fprintf('\t\t ...no salam data \n')
+                salam_data = [];
+                return
+            end
+            
             fnames = fieldnames(dataStruct.data_featextract);
             [rows,cols] = structfun(@size, dataStruct.data_featextract);
             behID = repelem([1:length(fnames)]',rows);
@@ -98,11 +150,12 @@ classdef larvaPlot
                 minT = min([bS;temp(:,2)]);
                 maxT = max([bE;temp(:,1)]);
 
-                if size(temp,1) == 1
+                if size(temp,1) <= length(fnames)
                     tS = [nan];
                     tE = [nan];
-                    bS = [nan];
-                    bE = [nan];
+                    bS = nan(length(fnames),1);
+                    bE = nan(length(fnames),1);
+                    bT = unique(dat(:,end));
                 else
                     if minT > (temp(1,2) - temp(1,3))
                         tS = temp(1,2) - temp(1,3);
@@ -115,63 +168,92 @@ classdef larvaPlot
                     else
                         tE = maxT;
                     end
+                    bT = temp(:,end);
                 end
 
                 tStart = [tStart tS];
                 tEnd = [tEnd tE];
                 bStart = [bStart; bS];
                 bEnd = [bEnd; bE];
-                bType = [bType; temp(:,end)];
+                bType = [bType; bT];
             end
             
+            salam_data.pipeline = 'salam';
             salam_data.aniID = uniID';
             salam_data.tStart = tStart;
             salam_data.tEnd = tEnd;
-
+            
+            idcounts = nonzeros(accumarray(aniID,1));
+            idcounts(idcounts<length(fnames)) = length(fnames);
+            aniID = repelem(uniID,idcounts);
+            
             bMerged = [aniID, bStart, bEnd, bType];
             [C,ia,ic] = unique(bMerged,'rows');
             bMerged = bMerged(ia,:);
             for jj = 1:length(fnames)
+                [~,~,uni_full] = unique(bMerged(:,1));
                 f = bMerged(:,end) == jj;
-                [C,ia,ic] = unique(bMerged(f,1));
-                counts = accumarray(ic,1);
-                salam_data.(fnames{jj}).bStart = mat2cell(bMerged(f,2),counts,1)';
-                salam_data.(fnames{jj}).bEnd = mat2cell(bMerged(f,3),counts,1)';
+%                 [C,ia,ic] = unique(uni_full(f,1));
+                counts = accumarray(uni_full(f,1),1);
+                salam_data.(fnames{jj}).bStart = mat2cell(bMerged(f,2)',1,counts);
+                salam_data.(fnames{jj}).bEnd = mat2cell(bMerged(f,3)',1,counts);
             end
         end
         
         %% 
         function jaaba = compile_jaaba(dataStruct)
-            get_fields = {["behaviorName"];
-                    ["timestamps"];
-                    ["trx","id"];
-                    ["allScores","tStart"];
-                    ["allScores","tEnd"];
-                    ["allScores","t0s"];
-                    ["allScores","t1s"];
-                    ["allScores","postprocessed"]};
-            new_fields = {[""]};
-                
-            jaaba = struct();
-            for ii = 1:length(get_fields)
-                args = cellstr(get_fields{ii});
-                len = length(args);
-                try
-                    if len == 1
-                        jaaba.(args{end}) = [dataStruct.data_jaaba.(args{1})];
-                    elseif len == 2
-                        jaaba.(args{end}) = [dataStruct.data_jaaba.(args{1}).(args{2})];
-                    elseif len == 3
-                        jaaba.(args{end}) = [dataStruct.data_jaaba.(args{1}).(args{2}).(args{3})];
-                    end
-                catch
-                    fprintf('... No field called jaaba_data.%s \n',strjoin(strcat(args,'.')));
-                end
+%             get_fields = {["behaviorName"];
+%                     ["timestamps"];
+%                     ["trx","id"];
+%                     ["allScores","tStart"];
+%                     ["allScores","tEnd"];
+%                     ["allScores","t0s"];
+%                     ["allScores","t1s"];
+%                     ["allScores","postprocessed"]};
+%             new_fields = {[""]};
+%                 
+%             jaaba = struct();
+%             for ii = 1:length(get_fields)
+%                 args = cellstr(get_fields{ii});
+%                 len = length(args);
+%                 try
+%                     if len == 1
+%                         jaaba.(args{end}) = [dataStruct.data_jaaba.(args{1})];
+%                     elseif len == 2
+%                         jaaba.(args{end}) = [dataStruct.data_jaaba.(args{1}).(args{2})];
+%                     elseif len == 3
+%                         jaaba.(args{end}) = [dataStruct.data_jaaba.(args{1}).(args{2}).(args{3})];
+%                     end
+%                 catch
+%                     fprintf('... No field called jaaba_data.%s \n',strjoin(strcat(args,'.')));
+%                 end
+%             end
+            if isempty(dataStruct.data_jaaba)
+                fprintf('\t\t ...no jaaba data \n')
+                jaaba = [];
+                return
             end
+            
+            temp = dataStruct.data_jaaba;
+            timestamps = temp.timestamps;
+
+            clear jaaba
+            jaaba.aniID = [temp.trx.id];
+            jaaba.tStart = timestamps(temp.allScores.tStart);
+            jaaba.tEnd = timestamps(temp.allScores.tEnd);
+            jaaba.(temp.behaviorName).bStart = cellfun(@(x) timestamps(x), temp.allScores.t0s, 'UniformOutput',false);
+            jaaba.(temp.behaviorName).bEnd = cellfun(@(x) timestamps(x), temp.allScores.t1s, 'UniformOutput',false);
+            jaaba.timestamps = timestamps;
         end
         
         %% compile jb
         function jb = compile_jb(dataStruct)
+            if isempty(dataStruct.data_jb)
+                fprintf('\t\t ...no jb data \n')
+                jb = [];
+                return
+            end
+            
             trx = dataStruct.data_jb.trx;
             
             jb = struct();
@@ -183,6 +265,7 @@ classdef larvaPlot
             beh_type = {'t_start_stop',...
                 't_start_stop_large',...
                 't_start_stop_large_small'};
+            beh_type = {'t_start_stop'};
 
             tokens = regexp(beh_type,'(^\w)|[_](\w)','tokens');
             tokens = cellfun(@(x) string([x{:}]), tokens, 'UniformOutput',false);
@@ -191,9 +274,10 @@ classdef larvaPlot
             for ii = 1:length(beh_type)
                 len = length(trx(1).(beh_type{ii}));
                 beh_cell = [trx.(beh_type{ii})];
-                beh_starts = cellfun(@(x) x(:,1),beh_cell,'UniformOutput',false, 'ErrorHandler',@(S,varargin) []);
+                beh_cell = cellfun(@transpose, beh_cell,'UniformOutput', false);
+                beh_starts = cellfun(@(x) x(1,:),beh_cell,'UniformOutput',false, 'ErrorHandler',@(S,varargin) []);
                 beh_starts = reshape(beh_starts,len,[]);
-                beh_ends = cellfun(@(x) x(:,2),beh_cell,'UniformOutput',false, 'ErrorHandler',@(S,varargin) []);
+                beh_ends = cellfun(@(x) x(2,:),beh_cell,'UniformOutput',false, 'ErrorHandler',@(S,varargin) []);
                 beh_ends = reshape(beh_ends,len,[]);
                 for jj = 1:len
                     jb.([beh_name{jj},'_',beh_code{ii}]).bStart = beh_starts(jj,:);
