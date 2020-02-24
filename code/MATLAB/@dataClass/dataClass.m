@@ -10,6 +10,19 @@
 % Website: https://github.com/alastairgarner/
 % Sep 2019; Last revision: 
 
+
+%% TO DO 
+%
+% - eliminate duplicate entried in salam compile
+%
+%
+%
+%
+%
+
+
+
+%%
 classdef dataClass
     %UNTITLED5 Summary of this class goes here
     %   Detailed explanation goes here
@@ -30,7 +43,8 @@ classdef dataClass
         rig = ""
         
         aniID = []
-%         uniID = []
+        uniID = []
+        timestamp_index = []
         track_start = [];
         track_end = [];
 
@@ -39,26 +53,68 @@ classdef dataClass
 %         object = struct();
         
         raw_data = [];
+        
+        group;
+        group_driver;
+        group_effector;
+        group_effector_protocol;
+        group_genotype;
+        group_protocol;
+        group_experiment;
+        
+        figure_directory = [];
     end
     
     %% METHODS NORMAL
     methods
-        
-        %% Construct object from file paths
+%         %% dataClass Constructor
+%         function obj = dataClass(filepaths)
+%             if nargin ~= 0
+%                 [split_filepaths,names,exts] = cellfun(@(x) fileparts(x),filepaths,'UniformOutput', false);
+%                 [unique_filepaths,~,indicies] = unique(split_filepaths,'stable');
+% %                 issalam = contains(names, "animal_stats");
+% %                 indicies(issalam) = nan;
+%                 [unique_filepaths,~,indicies] = unique(indicies);
+%                 
+%                 elems = numel(unique_filepaths);
+%                 obj(elems,1) = dataClass();
+%                 % 
+%                 for ii = 1:numel(unique_filepaths)
+%                     idx = indicies == ii;
+%                     obj(ii).filepath = string(filepaths(idx))';
+%                     temp = dataContainer.parse_filepaths(filepaths(idx));
+%                     % merge struct to object
+%                     for fn = fieldnames(temp)'    %enumerat fields
+%                         try
+%                           obj(ii).(fn{1}) = temp.(fn{1});   %and copy
+%                         catch
+%                           warning('Could not copy field %s', fn{1});
+%                         end
+%                     end
+%                 end
+%             end
+%         end
+
+        %% dataClass Constructor
         function obj = dataClass(filepaths)
             if nargin ~= 0
-                [split_filepaths,names,exts] = cellfun(@(x) fileparts(x),filepaths,'UniformOutput', false);        
-                [unique_filepaths,~,indicies] = unique(split_filepaths,'stable');
-%                 issalam = contains(names, "animal_stats");
-%                 indicies(issalam) = nan;
-                [unique_filepaths,~,indicies] = unique(indicies);
                 
-                elems = numel(unique_filepaths);
+                timestamps = regexp(filepaths,'\d{8}_\d{6}','match','once');
+                filt = ~cellfun(@isempty,timestamps);
+                timestamps = string(timestamps(filt));
+                filepaths = filepaths(filt);
+                
+                [split_filepaths,names,exts] = cellfun(@(x) fileparts(x),filepaths,'UniformOutput', false);
+                identifiers = strcat(split_filepaths,'@',timestamps);
+
+                [unique_identifiers,~,indicies] = unique(identifiers);
+                elems = numel(unique_identifiers);
                 obj(elems,1) = dataClass();
-                % 
-                for ii = 1:numel(unique_filepaths)
+
+                for ii = 1:numel(unique_identifiers)
                     idx = indicies == ii;
                     obj(ii).filepath = string(filepaths(idx))';
+                    obj(ii) = obj(ii).update_pipeline();
                     temp = dataContainer.parse_filepaths(filepaths(idx));
                     % merge struct to object
                     for fn = fieldnames(temp)'    %enumerat fields
@@ -69,8 +125,8 @@ classdef dataClass
                         end
                     end
                 end
+                obj = update_groups(obj);
             end
-            
         end
         
         %% Save Data
@@ -88,50 +144,106 @@ classdef dataClass
             end
         end
         
-        %% Load data
-        function obj = load_data(obj)
+        %% update pipeline
+        function obj = update_pipeline(obj)
             for ii = 1:numel(obj.filepath)
                 [fold,name,ext] = fileparts(obj.filepath(ii));
                 if startsWith(ext,".blo")
                     obj.pipeline = "mwt";
-                    obj = obj.load_blobsdata();
                     return
                 elseif startsWith(ext,".txt")
-
                     if contains(lower(name),"chore")
                         obj.pipeline = "choreography";
-                        obj = obj.load_choredata();
                         return
                     elseif contains(lower(name),"animal_stats")
                         obj.pipeline = "salam";
-                        obj = obj.load_salamdata();
                         return
                     end
-
                 elseif startsWith(ext,".mat")
-
                     if contains(name,"trx")
                         file_check = dir(fold);
                         if any({file_check.name} == "perframe")
                             obj.pipeline = "jaaba";
-                            obj = obj.load_jaabadata();
                             return
                         else
                             obj.pipeline = "jb";
-                            obj = obj.load_jbdata();
                             return
                         end
-                    else
-                        obj = obj.load_compileddata();
+                    elseif contains(fold,"tempdir")
+                        [~,typ,~] = fileparts(fold);
+                        obj.pipeline = typ;
+                        return
                     end
                 end
             end
         end
         
+        %% Load data
+        function obj = load_data(obj)
+            if contains(obj.filepath,["tempdir","data_compiled"])
+                obj = obj.load_compileddata();
+            elseif strcmp(obj.pipeline,"mwt")
+                obj = obj.load_blobsdata();
+            elseif strcmp(obj.pipeline,"choreography")
+                obj = obj.load_choredata();
+            elseif strcmp(obj.pipeline,"salam")
+                obj = obj.load_salamdata();
+            elseif strcmp(obj.pipeline,"jaaba")
+                obj = obj.load_jaabadata();
+            elseif strcmp(obj.pipeline,"jb")
+                obj = obj.load_jbdata();
+            end
+        end
+        
+        %% Load data
+%         function obj = load_data(obj)
+%             for ii = 1:numel(obj.filepath)
+%                 [fold,name,ext] = fileparts(obj.filepath(ii));
+%                 if startsWith(ext,".blo")
+%                     obj.pipeline = "mwt";
+%                     obj = obj.load_blobsdata();
+%                     return
+%                 elseif startsWith(ext,".txt")
+% 
+%                     if contains(lower(name),"chore")
+%                         obj.pipeline = "choreography";
+%                         obj = obj.load_choredata();
+%                         return
+%                     elseif contains(lower(name),"animal_stats")
+%                         obj.pipeline = "salam";
+%                         obj = obj.load_salamdata();
+%                         return
+%                     end
+% 
+%                 elseif startsWith(ext,".mat")
+% 
+%                     if contains(name,"trx")
+%                         file_check = dir(fold);
+%                         if any({file_check.name} == "perframe")
+%                             obj.pipeline = "jaaba";
+%                             obj = obj.load_jaabadata();
+%                             return
+%                         else
+%                             obj.pipeline = "jb";
+%                             obj = obj.load_jbdata();
+%                             return
+%                         end
+%                     else
+%                         obj = obj.load_compileddata();
+%                     end
+%                 end
+%             end
+%         end
+        
         %% Load blobs data
         function obj = load_compileddata(obj)
-            temp = load(obj.filepath);
-            temp.dC.filepath = obj.filepath;
+            temp = load(obj.filepath(1));
+            fields_copy = {'filepath','group','group_driver','group_effector','group_effector_protocol','group_genotype',...
+                'group_protocol','group_experiment','figure_directory'};
+            for ii = 1:numel(fields_copy)
+                temp.dC.(fields_copy{ii}) = obj.(fields_copy{ii});
+            end
+%             temp.dC.filepath = obj.filepath;
             obj = temp.dC;
         end
             
@@ -252,7 +364,7 @@ classdef dataClass
                 % Restructure crawl data to match other data
                 filler = zeros(length(dataArray{1}),1);
                 if ~all(isnan(dataArray{end-1}))
-                    dataArray = dataArray([1:5,9,7,10,11,6,8]);
+                    dataArray = dataArray([1:5,9,6,10,11,8,7]);
                 end
 
                 salam_matrix = [dataArray{[2:11]}];
@@ -321,13 +433,13 @@ classdef dataClass
             fnames = fieldnames(obj.raw_data);
             [rows,cols] = structfun(@size, obj.raw_data);
             behID = repelem([1:length(fnames)]',rows,1);
-            dat = struct2cell(obj.raw_data);
+            dat = struct2cell(obj.raw_data);                
             dat = [vertcat(dat{:}) behID];
             dat = sortrows(dat, [1,2,7]);
 
             aniID = dat(:,1);
             uniID = unique(aniID);
-            tStart = []; tEnd = []; bStart = []; bEnd = []; bType = [];
+            tStart = []; tEnd = []; bStart = []; bEnd = []; bType = []; bAmp = []; bFreq = [];
 
             for jj = 1:size(uniID,1)
                 filt = aniID == uniID(jj);
@@ -335,6 +447,8 @@ classdef dataClass
                 temp = sortrows(temp,1);
                 bS = dat(filt,7);
                 bE = dat(filt,7) + dat(filt,5);
+                bA = dat(filt,4);
+                bF = dat(filt,6);
                 minT = min([bS;temp(:,2)]);
                 maxT = max([bE;temp(:,1)]);
                 
@@ -349,6 +463,8 @@ classdef dataClass
                     % assign nan to the 
                     bS = nan(size(temp,1),1);
                     bE = nan(size(temp,1),1);
+                    bA = nan(size(temp,1),1);
+                    bF = nan(size(temp,1),1);
                     bT = temp(:,end);
                 else
                     if minT > (temp(1,2) - temp(1,3))
@@ -369,9 +485,23 @@ classdef dataClass
                 tEnd = [tEnd tE];
                 bStart = [bStart; bS];
                 bEnd = [bEnd; bE];
+                bAmp = [bAmp; bA];
+                bFreq = [bFreq; bF];
                 bType = [bType; bT];
             end
-
+            % filt out duplicate behaviours
+            if all(isnan(aniID))
+                fprintf("no usable salam data \n")
+                return
+            end
+            [~,f,~] = unique([aniID,bStart,bEnd,bType],'rows','stable');
+            bStart = bStart(f);
+            bEnd = bEnd(f);
+            bAmp = bAmp(f);
+            bFreq = bFreq(f);
+            bType = bType(f);
+            
+            % assign variables to object
             obj.aniID = uniID';
             obj.track_start = tStart;
             obj.track_end = tEnd;
@@ -383,8 +513,12 @@ classdef dataClass
                 temp.id = aniID(filt)';
                 temp.start = bStart(filt)';
                 temp.end = bEnd(filt)';
-                temp.amplitude = [];
-                temp.frequency = [];
+                temp.amplitude = bAmp(filt)';
+                if strcmp(fnames{ii},"peran")
+                    temp.frequency = bFreq(filt)';
+                else
+                    temp.frequency = [];
+                end
                 % count the number of events per animal (occaisionally 0 - have to use "ismember")
                 [B,I] = ismember(temp.id,obj.aniID);
                 [C,~,ic] = unique(I');
@@ -557,6 +691,45 @@ classdef dataClass
             fprintf('\t----%s - mwt compiled \n',obj.get_full_experiment)
         end
         
+        %%
+        function obj = update_unique_ids(obj)
+            % work out the unique ids across timestamps
+            counts = arrayfun(@(x) numel(x.aniID),obj);
+            ids = [obj.aniID];
+            exps = [obj.group_experiment];
+            exps = repelem(exps,counts);
+            [~,~,timestamp_index] = unique(exps,'stable');
+            
+            % deal the unique ids back to the class instances
+            [lkup,~,unids] = unique([exps;ids]','rows','stable');
+            unids_cell = mat2cell(unids',1,counts);
+            [obj.uniID] = unids_cell{:};
+            index_cell = mat2cell(timestamp_index',1,counts);
+            [obj.timestamp_index] = index_cell{:};
+            
+%             uniID_timestamp = cellfun(@(x) unique(unids(exps == x)),...
+%                 num2cell(unique(exps,'stable')),...
+%                 'UniformOutput', false);
+
+            % add the unique ids at the behaviour/timeseries level
+            for ii = 1:numel(obj)
+                if any(contains(fieldnames(obj(ii).timeseries),'id'))
+                    counts = arrayfun(@(x) numel(x.id), obj(ii).timeseries);
+                    [~,idx] = ismember([obj(ii).timeseries.id],[obj(ii).aniID]);
+                    unids = mat2cell(obj(ii).uniID(idx),1,counts);
+                    [obj(ii).timeseries.uniID] = unids{:};
+                end
+
+                if any(contains(fieldnames(obj(ii).behaviour),'id'))
+                    counts = arrayfun(@(x) numel(x.id), obj(ii).behaviour);
+                    [~,idx] = ismember([obj(ii).behaviour.id],[obj(ii).aniID]);
+                    unids = mat2cell(obj(ii).uniID(idx),1,counts);
+                    [obj(ii).behaviour.uniID] = unids{:};
+                end
+            end
+        end
+        
+        
         %% extract full genotype
         function full_genotype = get_full_genotype(obj)
             full_genotype = strcat([obj.driver],'@',[obj.effector]);
@@ -586,8 +759,106 @@ classdef dataClass
             file = dir(obj.filepath(1));         
             tf = file.bytes ~= 0;
         end
-    end
+        
+        %% generate figure directory
+        function obj = update_figure_directories(obj,params)
+            [un_prot,~,idx_prot] = unique([obj.group_effector_protocol]);
+            
+            for ii = 1:length(un_prot)
+                idx = idx_prot == ii;
+
+                dates = double([obj(idx).date]);
+                n_timestamps = numel(unique(obj(idx).get_full_timestamp));
+                effector = [obj(idx).effector];
+                protocol = obj(idx).get_full_protocol;
+
+                fig_dir = sprintf("%d_%d@%s@%s@x%d",...
+                    min(dates),max(dates),effector(1),...
+                    protocol(1),n_timestamps);
+                
+                fig_dir = fullfile(params.directories.master,'figures',fig_dir);
+                
+                dirs = num2cell(repelem(fig_dir,numel(idx),1));
+                [obj(idx).figure_directory] = dirs{:};
+            end
+        end
+        
+        %% merge_dataClasses
+        one_dataClass = merge_dataClasses(obj);
+                
+        dc_genotype = load_bygenotype(obj,genotype_number)
+        
+        dc_genotype = load_bygroup(obj)
+        
+        dc_group = load_groups(obj,filter_date_tf)
+        
+        protocol_struct = parse_protocol(obj)
+        
+        plot_struct = append_2_plotstruct(obj,plot_struct,params,behaviour,metric,instance,method,frame)
+        
+        data_array = get_behaviour_data(obj,behaviour,params)
+
+        obj = filter_by_size(obj,area_threshold)
+        
+        [ax,figure_path] = plot_ridgeline_timeseries(obj,params,feature,frame_start,frame_end,y_scaler)
+        
+        [ax,figure_path] = plot_timeseries(obj,params,feature,frame_start,frame_end,y_limits,calculation,colormap)
+        
+        [ax,fig_path] = plot_timeseries_byday(obj,params,feature,frame_start,frame_end,y_limits,calculation,colormap)
+        
+        [ax,figure_path] = plot_ethogram(obj,params,behaviours_cell,frame_start,frame_end,offset)
+        
+        [ax,fig_path] = plot_behaviour_timeseries(obj,params,behaviour,bin_width,x_lims,y_lims,cmap)
+                
+        plot_stimulation_time(obj,params)
+        
+        %% update groups
+        function obj = update_groups(obj)
+            [~,~,grp_prot] = unique(obj.get_full_protocol);
+            [~,~,grp_eff] = unique([obj.effector]);
+            [~,~,grp_dri] = unique([obj.driver]);
+            [~,~,grp_efp] = unique(strcat([obj.effector],'@',obj.get_full_protocol));
+            [~,~,grp_gen] = unique(obj.get_full_genotype);
+            [~,~,grp_exp] = unique(obj.get_full_experiment');
+
+            grp_prot = num2cell(grp_prot);
+            grp_eff = num2cell(grp_eff);
+            grp_dri = num2cell(grp_dri);
+            grp_efp = num2cell(grp_efp);
+            grp_gen = num2cell(grp_gen);
+            grp_exp = num2cell(grp_exp);
+
+            [obj.group_genotype] = grp_gen{:};
+            [obj.group_driver] = grp_dri{:};
+            [obj.group_effector] = grp_eff{:};
+            [obj.group_effector_protocol] = grp_efp{:};
+            [obj.group_protocol] = grp_prot{:};
+            [obj.group_experiment] = grp_exp{:};
+        end
+        
+        %%
+        function [n_groups,group_numbers] = get_group_numbers(obj,varargin)
+            args = varargin;
+            
+            if any(contains(args,'protocol'))
+                args = [args(~contains(args,'protocol')),...
+                    'protocol1','protocol2','protocol3','protocol4'];
+            end
+            
+            if any(contains(args,'timestamp'))
+                args = [args(~contains(args,'timestamp')),...
+                    'date','time'];
+            end
+
+            strngs = cellfun(@(x) [obj.(x)], args, 'UniformOutput', false);
+            strngs = [strngs;repelem({'@'},1,numel(args))];
+
+            [C,~,group_numbers] = unique(strcat(strngs{:})','stable');
+            n_groups = numel(C);
+        end
     
+    end
+        
     %% METHODS - STATIC
     
     methods (Static)
@@ -705,13 +976,17 @@ classdef dataClass
         end
         
         %% generate_contents_file
-        generate_contents_file(obj,contentfile,pipelines,params)
+        generate_contents_file(obj,contentfile,pipelines,params);
         
         %% generate_contents_file
-        update_contents_file(obj,contentfile,files_to_append,pipelines,params)
+        update_contents_file(obj,contentfile,files_to_append,pipelines,params);
         
         %% filterby_contents_file
-        filelist_filtered = filterby_contents_file(filelist,contentfile,pipelines,params)
+        filelist_filtered = filterby_contents_file(filelist,contentfile,pipelines,params);
+        
+        [ax,figure_path] = plot_grouped_beeswarm(obj,plot_struct,sorted,normalise_control_tf,control_genotype,highlight_genotype,y_label)
+        
+        save_figure_catch(ax,figure_path);
         
     end
 end

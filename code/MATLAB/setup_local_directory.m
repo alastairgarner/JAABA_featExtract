@@ -18,7 +18,7 @@ function setup_local_directory(params,filepaths)
     end
     mkdir(params.directories.tempdir)
     % make local directory (for speedier loading of data)
-    fullpaths_local = strrep(filepaths,params.directories.data_compiled,params.directories.tempdir);
+    fullpaths_local = strrep(filepaths,get_absolute_path(params.directories.data_compiled),params.directories.tempdir);
     tempfolders = unique(cellfun(@fileparts,fullpaths_local, 'UniformOutput', false));
     for ii = 1:numel(tempfolders)
         mkdir(tempfolders{ii})

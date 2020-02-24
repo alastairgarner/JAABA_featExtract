@@ -50,7 +50,7 @@ function update_contents_file(contentfile,newfilenames,pipelines,params)
         cont_mat = [csv{1:numel(pipelines)}];
         match = all(ismember([csv{numel(pipelines)+1:end-1}],details_cell),2);
         if any(match)
-            cont_mat(match,:) = content_out;
+            cont_mat(match,:) = cont_mat(match,:) | content_out;
             out_cell = [num2cell(cont_mat),csv{6:end-1}]';
         else
             csv(1:numel(pipelines)) = cellfun(@num2cell, csv(1:numel(pipelines)), 'UniformOutput', false);
