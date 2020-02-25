@@ -157,6 +157,7 @@ for ii = 1:n_prot
         dataArray = dataArray.filter_by_size(params.area_cutoff);
 
         %%
+%         figure('Resize','off')
         subplot(2,2,1)
         [ax,figure_path] = dataArray.plot_timeseries(params,"curve",28,40,[0 50],"norm",cmap);
         subplot(2,2,3)
@@ -166,11 +167,13 @@ for ii = 1:n_prot
         subplot(2,2,4)
         [ax,figure_path] = dataArray.plot_timeseries(params,"crabspeed",28,40,[-.2 .35],"diff",cmap);
         
+        set_legend_relative_position([.75 1.05 .25 .2])
         fix_axes(gcf,7,true)
         figure_path = strrep(figure_path,"crabspeed_diff","by_day");
         dataClass.save_figure_catch(ax,figure_path);
         close
-                
+        
+        
         %%
         subplot(2,2,1)
         [ax,figure_path] = dataArray.plot_behaviour_timeseries(params,{"rolls"},.2,[25 50],[0 60],cmap);
@@ -181,7 +184,8 @@ for ii = 1:n_prot
         subplot(2,2,4)
         [ax,figure_path] = dataArray.plot_behaviour_timeseries(params,{"hunches"},.2,[25 50],[0 100],cmap);
         
-        fix_axes(gcf,7,true)
+        set_legend_relative_position([.75 1.05 .25 .2])
+        fix_axes(gcf,7,true)        
         figure_path = strrep(figure_path,"hunches","by_day");
         dataClass.save_figure_catch(ax,figure_path);
         close

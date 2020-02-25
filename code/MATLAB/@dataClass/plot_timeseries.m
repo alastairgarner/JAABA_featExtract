@@ -62,8 +62,10 @@ function [ax,fig_path] = plot_timeseries(obj,params,feature,frame_start,frame_en
     end
 
     % fix Z order
-    chi = get(gca,"Children");
-    set(gca,"Children",sort(chi));
+    lines = findobj(gca,'Type','Line');
+    other = findobj(gca,'-not','Type','Line','-not','Type','Axes');
+    [~,I] = sort(double(string({lines.Tag})),'descend');
+    set(gca,'Children',[lines(I);other]);
 
     % clean up axes
     xlim([fr1 fr2])
@@ -78,14 +80,11 @@ function [ax,fig_path] = plot_timeseries(obj,params,feature,frame_start,frame_en
     disp_names = {obj.driver};
     disp_names = cellfun(@(x) strrep(x,'GMR_',''), disp_names,'UniformOutput', false);
 
-    chi = get(gca,'Children');
-    plts = arrayfun(@(x) strcmpi(x.Type,'line'), chi);
-
-    axP = get(gca,'Position'); 
-    legend(flipud(chi(plts)),disp_names,'Location','NorthEastOutside','Interpreter', 'none'); 
-    set(gca, 'Position', axP);
+    relative_position = [.7 1.05 .3 .2];
+    plts = findobj(gca,'Type','Line');
+    pause(0.01)
+    flexi_legend(flipud(plts),disp_names,'RelativePosition',relative_position,'Interpreter', 'none','Box','off');
     
-
     % set up save name and path 
     figure_dir = obj.figure_directory;
     fig_type = strcat("timeseries_",feature,"_",calc);
