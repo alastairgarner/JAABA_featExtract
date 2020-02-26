@@ -107,7 +107,8 @@ function [ax,fig_path] = plot_behaviour_timeseries(obj,params,behaviour,bin_widt
 
     relative_position = [.7 1.05 .3 .2];
     plts = findobj(gca,'Type','Line');
-    flexi_legend(flipud(plts),disp_names,'RelativePosition',relative_position,'Interpreter', 'none','Box','off');
+%     flexi_legend(flipud(plts),disp_names,'RelativePosition',relative_position,'Interpreter', 'none','Box','off');
+    leg = legend(gca,flipud(plts),disp_names,'Interpreter', 'none','Box','off');
     
     % set up save name and path 
     figure_dir = obj.figure_directory;

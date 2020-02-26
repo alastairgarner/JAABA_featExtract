@@ -36,6 +36,8 @@ hold(ax,'off')
 
 background_elements = findobj(ax.Children,'-regexp','DisplayName','background*');
 other_elements = findobj(ax.Children,'-not',{'-regexp','DisplayName','background*'});
-set(ax,'Children',[other_elements;background_elements]);
+set(ax,'Children',[other_elements;background_elements],...
+    'XLim',xlm,...
+    'YLim',ylm);
 
 end

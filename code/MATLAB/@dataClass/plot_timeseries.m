@@ -82,8 +82,9 @@ function [ax,fig_path] = plot_timeseries(obj,params,feature,frame_start,frame_en
 
     relative_position = [.7 1.05 .3 .2];
     plts = findobj(gca,'Type','Line');
-    pause(0.01)
-    flexi_legend(flipud(plts),disp_names,'RelativePosition',relative_position,'Interpreter', 'none','Box','off');
+%     flexi_legend(flipud(plts),disp_names,'RelativePosition',relative_position,'Interpreter', 'none','Box','off');
+    legend(gca,flipud(plts),disp_names,'Interpreter', 'none','Box','off');
+%     set(gca,'LegendColorbarListeners',[]);
     
     % set up save name and path 
     figure_dir = obj.figure_directory;
@@ -95,5 +96,6 @@ function [ax,fig_path] = plot_timeseries(obj,params,feature,frame_start,frame_en
     fig_path = fullfile(figure_dir,fig_type,fname);
 
     ax = gca;
+    addlistener(ax,'Position','PostSet',@(~,~) fprintf('Change detected'));
     
 end

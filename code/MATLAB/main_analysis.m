@@ -14,6 +14,8 @@
 clear all; clc;
 fprintf('\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n');
 
+set(0,'DefaultLegendAutoUpdate','off')
+
 %% Load Parameters
 
 parameterFile = 'params_AG_external.yaml'; 
@@ -172,8 +174,7 @@ for ii = 1:n_prot
         figure_path = strrep(figure_path,"crabspeed_diff","by_day");
         dataClass.save_figure_catch(ax,figure_path);
         close
-        
-        
+                
         %%
         subplot(2,2,1)
         [ax,figure_path] = dataArray.plot_behaviour_timeseries(params,{"rolls"},.2,[25 50],[0 60],cmap);
