@@ -36,6 +36,7 @@ function one_dataClass = merge_dataClasses(obj)
             dca_new(ii,1).timeseries = temp;
         % merge salam/jaaba/jb data
         elseif any(strcmp(pipes{ii},{'salam','jaaba','jb'}))
+            
             behs = vertcat(dca(f).behaviour);
             [C,~,ic] = unique({behs.behaviour});
             % loop through behaviours

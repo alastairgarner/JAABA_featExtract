@@ -19,7 +19,7 @@ function [ax,fig_path] = plot_timeseries(obj,params,feature,frame_start,frame_en
     
     for xx = 1:numel(obj)
         data = obj(xx);
-        if numel(fieldnames(data.timeseries)) == 0
+        if numel(fieldnames(data.timeseries)) == 0 | ~numel(data.timeseries)
             ax = [];
             figure_path = [];
             continue

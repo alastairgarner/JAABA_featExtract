@@ -24,10 +24,10 @@ function plot_struct = append_2_plotstruct(obj,plot_struct,params,behaviour,metr
         plot_struct = struct(fnames{:});
         group = 0;
     else
-        group = max(plot_struct.group);
+        group = max([plot_struct.group,0]);
     end
     
-    x = []; y = []; c = []; labels = []; timestamps = []; dates =[];
+    x = []; y = []; c = []; labels = []; timestamps = []; dates = [];
     for xx = 1:numel(obj)
     	f = strcmp({obj(xx).behaviour.behaviour},behaviour);
         if any(f)
@@ -62,6 +62,10 @@ function plot_struct = append_2_plotstruct(obj,plot_struct,params,behaviour,metr
         f1 = ~isnan(temp.start);
         f2 = temp.track_start < frame(1) & temp.track_end > frame(2);
         filt = f1 & f2 & f3;
+        
+        if ~any(f2)
+            return
+        end
         
         timestamp_n = accumarray(temp.timestamp(f2),temp.uniID(f2)',...
             [max(temp.timestamp(f2)) 1],@(x) numel(unique(x)));
@@ -117,17 +121,30 @@ function plot_struct = append_2_plotstruct(obj,plot_struct,params,behaviour,metr
             case 'proportion'
                 counts = accumarray(ts_i,1,[numel(timestamp_n),1]);
                 tot = counts./timestamp_n;
-                tot = repelem(tot',1,counts)';                
+                tot = repelem(tot',1,counts)';
         end
                 
         % metric by timestamp
-        ave_tot = accumarray(ts_i,tot,[numel(timestamp_n),1],@mean,NaN)';
-        grp = repelem([xx+group],1,numel(ave_tot));
+        if true
+            ave_tot = accumarray(ts_i,tot,[numel(timestamp_n),1],@mean,NaN)';
+            grp = repelem([xx+group],1,numel(ave_tot));
+            tstamps = 1:numel(timestamp_n);
+        else
+            ave_tot = tot';
+            mtch = strcmp(plot_struct.labels,obj.driver);
+%             if plot_struct.group(mtch)
+%                 repelem(mean(plot_struct.group(mtch)),1,numel(ave_tot))
+%             else
+            grp = repelem([xx+group],1,numel(ave_tot));
+%             end
+            tstamps = ts_i';
+            un_dates = un_dates(ts_i');
+        end
         
         x = [x, grp];
         y = [y, ave_tot];
         labels = [labels obj(xx).driver];
-        timestamps = [timestamps 1:numel(timestamp_n)];
+        timestamps = [timestamps tstamps];
         dates = [dates un_dates];
     end
         

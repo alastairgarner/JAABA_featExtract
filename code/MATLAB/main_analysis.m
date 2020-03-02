@@ -77,33 +77,36 @@ for ii = 1:n_groups
     idx = group_num == ii;
     dct = dc(idx);
     
+    xlm = [25,45];
+%     xlm = [40,80];
+    
     %
     dA = dct.load_groups(true);
     dA = dA.filter_by_size(params.area_cutoff);
     %
-    [ax,figure_path] = dA.plot_ridgeline_timeseries(params,'crabspeed',25,45,5/12);
+    [ax,figure_path] = dA.plot_ridgeline_timeseries(params,'crabspeed',xlm(1),xlm(2),5/12);
     fix_axes(gcf,7,false)
     dataClass.save_figure_catch(ax,figure_path);
     close
     %
-    [ax,figure_path] = dA.plot_ridgeline_timeseries(params,'curve',25,45,5/100);
+    [ax,figure_path] = dA.plot_ridgeline_timeseries(params,'curve',xlm(1),xlm(2),5/100);
     fix_axes(gcf,7,false)
     dataClass.save_figure_catch(ax,figure_path);
     close
     %
-    [ax,figure_path] = dA.plot_ridgeline_timeseries(params,'speed',25,45,5/12);
+    [ax,figure_path] = dA.plot_ridgeline_timeseries(params,'speed',xlm(1),xlm(2),5/12);
     fix_axes(gcf,7,false)
     dataClass.save_figure_catch(ax,figure_path);
     close
     %
-    [ax,figure_path] = dA.plot_ridgeline_timeseries(params,'midline',25,45,5/5);
+    [ax,figure_path] = dA.plot_ridgeline_timeseries(params,'midline',xlm(1),xlm(2),5/5);
     fix_axes(gcf,7,false)
     dataClass.save_figure_catch(ax,figure_path);
     close
     
     %
     behaviours = {"peran","rolls"};
-    [ax,figure_path] = dA.plot_ethogram(params,behaviours,25,50,0);
+    [ax,figure_path] = dA.plot_ethogram(params,behaviours,xlm(1),xlm(2)+5,0);
     fix_axes(gcf,7,false)
     dataClass.save_figure_catch(ax,figure_path);
     close
@@ -157,17 +160,21 @@ for ii = 1:n_prot
         
         dataArray = datagrp.load_groups(true);
         dataArray = dataArray.filter_by_size(params.area_cutoff);
+        
+        xlm = [28,40];
+%         xlm = [43,60];
 
         %%
 %         figure('Resize','off')
+        fig = figure('Visible','off');
         subplot(2,2,1)
-        [ax,figure_path] = dataArray.plot_timeseries(params,"curve",28,40,[0 50],"norm",cmap);
+        [ax,figure_path] = dataArray.plot_timeseries(params,"curve",xlm(1),xlm(2),[0 50],"norm",cmap);
         subplot(2,2,3)
-        [ax,figure_path] = dataArray.plot_timeseries(params,"crabspeed",28,40,[0 2.5],"norm",cmap);
+        [ax,figure_path] = dataArray.plot_timeseries(params,"crabspeed",xlm(1),xlm(2),[0 2.5],"norm",cmap);
         subplot(2,2,2)
-        [ax,figure_path] = dataArray.plot_timeseries(params,"curve",28,40,[-1 4],"diff",cmap);
+        [ax,figure_path] = dataArray.plot_timeseries(params,"curve",xlm(1),xlm(2),[-1 4],"diff",cmap);
         subplot(2,2,4)
-        [ax,figure_path] = dataArray.plot_timeseries(params,"crabspeed",28,40,[-.2 .35],"diff",cmap);
+        [ax,figure_path] = dataArray.plot_timeseries(params,"crabspeed",xlm(1),xlm(2),[-.2 .35],"diff",cmap);
         
         set_legend_relative_position([.75 1.05 .25 .2])
         fix_axes(gcf,7,true)
@@ -176,17 +183,18 @@ for ii = 1:n_prot
         close
                 
         %%
+        fig = figure('Visible','off');
         subplot(2,2,1)
-        [ax,figure_path] = dataArray.plot_behaviour_timeseries(params,{"rolls"},.2,[25 50],[0 60],cmap);
+        [ax,figure_path] = dataArray.plot_behaviour_timeseries(params,{"rolls"},.2,xlm,[0 60],cmap);
         subplot(2,2,2)
-        [ax,figure_path] = dataArray.plot_behaviour_timeseries(params,{"peran"},.2,[25 50],[0 100],cmap);
+        [ax,figure_path] = dataArray.plot_behaviour_timeseries(params,{"peran"},.2,xlm,[0 100],cmap);
         subplot(2,2,3)
-        [ax,figure_path] = dataArray.plot_behaviour_timeseries(params,{"turns"},.2,[25 50],[0 100],cmap);
+        [ax,figure_path] = dataArray.plot_behaviour_timeseries(params,{"turns"},.2,xlm,[0 100],cmap);
         subplot(2,2,4)
-        [ax,figure_path] = dataArray.plot_behaviour_timeseries(params,{"hunches"},.2,[25 50],[0 100],cmap);
+        [ax,figure_path] = dataArray.plot_behaviour_timeseries(params,{"hunches"},.2,xlm,[0 100],cmap);
         
         set_legend_relative_position([.75 1.05 .25 .2])
-        fix_axes(gcf,7,true)        
+        fix_axes(gcf,7,true);
         figure_path = strrep(figure_path,"hunches","by_day");
         dataClass.save_figure_catch(ax,figure_path);
         close
@@ -224,7 +232,7 @@ for ii = 1:n_prots
         end
         
         p = dA.parse_protocol();
-        frame = p.start + [0 p.length];
+        frame = p(1).start + [0 p(1).length];
         
         sum_dur_roll = dA.append_2_plotstruct(sum_dur_roll,params,'rolls','duration','all','sum',frame);
         
@@ -251,6 +259,10 @@ for ii = 1:n_prots
         end
         
         clear temp dA
+    end
+    
+    if isempty(ave_area)
+        continue
     end
    
     %%
@@ -469,6 +481,10 @@ for ii = 1:n_groups
 
         f = cellfun(@(x) min(x)<fr1 & fr2<max(x), {dA.timeseries.et});
         dA.timeseries = dA.timeseries(f);
+        
+        if isempty(fieldnames(dA.timeseries))
+            continue
+        end
 
         counts = arrayfun(@(x) numel(x.et), dA.timeseries);
         ids = repelem([dA.timeseries.uniID], 1,counts);
@@ -532,7 +548,7 @@ for ii = 1:prot_n
     dct = dc(idx);
     
     [stamp_n,stamp_grp] = dc(idx).get_group_numbers('timestamp');
-    for jj = 89:stamp_n
+    for jj = 1:stamp_n
         ix = stamp_grp == jj;
         dA = dct(ix).load_groups(true);
         
@@ -544,7 +560,7 @@ for ii = 1:prot_n
 
         bins = [0:.2:ceil(max(et))];
 
-        metric = [dA.timeseries.crabspeed];
+        metric = [dA.timeseries.curve];
         Y = discretize(et,bins);
         y = accumarray(Y',metric',[numel(bins) 1],@mean);
         n = accumarray(Y',ids',[numel(bins) 1],@(x) numel(unique(x)));
@@ -558,10 +574,12 @@ for ii = 1:prot_n
 
         titl = dA.get_full_timestamp;
         
+        fprintf(strcat(titl,'\n'))
+        
         if ~ishandle(ax)        
             title(titl,'Interpreter','none')
             p = plot(bins(1:end),y,'Color',[0 0 0], 'LineWidth', 2);
-            ylim([0 1.5])
+            ylim([0 max(y*3)])
             pbaspect([2,1,1])
             dA.plot_stimulation_time(params);
             ax = gca;

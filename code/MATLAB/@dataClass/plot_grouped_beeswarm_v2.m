@@ -1,4 +1,4 @@
-%% plot_grouped_beeswarm
+%% plot_grouped_beeswarm_v2
 % Subfunctions: 
 % MAT-files required: 
 % See also:
@@ -9,7 +9,14 @@
 % Sep 2019; Last revision: 
 
 %%
-function [ax,figure_path] = plot_grouped_beeswarm(plot_struct,sorted,normalise_control_tf,control_driver,highlight_driver,y_label)
+function [ax,figure_path] = plot_grouped_beeswarm_v2(plot_struct,sorted,normalise_control_tf,control_driver,highlight_driver,y_label)
+
+%     plot_struct = sum_dur_roll;
+%     normalise_control_tf = true;
+%     sorted = 'descend'
+%     control_driver = {'attp2'}
+%     highlight_driver = {'GMR_SS01816'}
+%     y_label = "\Delta Total Roll Duration (s)";
 
     y = plot_struct.y;
     grp = plot_struct.group;
@@ -47,7 +54,13 @@ function [ax,figure_path] = plot_grouped_beeswarm(plot_struct,sorted,normalise_c
             [~,order] = sort(means,'descend');
     end
     
+    cnts = accumarray([plot_struct.group]',1);    
     yy = mat2cell(y,1,counts);
+    
+    ave_tf = false;
+    if ~ave_tf
+        yy = yy(order);
+    end
     
     y_mean = repelem(means(order),1,2);
     x_mean = [1:numel(order)]' + ([-1 +1]*dash_width/2);
@@ -55,7 +68,7 @@ function [ax,figure_path] = plot_grouped_beeswarm(plot_struct,sorted,normalise_c
     x_err = [1:numel(order)] .* [1;1];
     
     hold on
-    p = plotSpread(yy(order),'distributionColors',[100 100 100]/255);
+    p = plotSpread(yy,'distributionColors',[100 100 100]/255);
     e = plot(x_err,y_err','k','LineWidth',.5);
     m = plot(x_mean',y_mean','k','LineWidth',1.5);
     hold off
@@ -85,13 +98,11 @@ function [ax,figure_path] = plot_grouped_beeswarm(plot_struct,sorted,normalise_c
     set(obs,'MarkerSize',8);
     ylabel(y_label)
     
-    ax = gca;
-    to_top = findobj(ax.Children,'LineStyle','-');
-    to_bot = findobj(ax.Children,'-not','LineStyle','-','-not','Type','Axes');
-    set(gca,'Children',[to_top;to_bot]);
+    to_top = findobj(gca,'LineStyle','-');
+    to_bot = findobj(gca,'-not','LineStyle','-','-not','Type','Axes');
+    set(gca,'Children',[to_top;to_bot])
     
-%     [pval,hval,stats] = mult_comp_wilcox(plot_struct);
-    [pval,hval,stats] = mult_comp_wilcox_byday(plot_struct);
+    [pval,hval,stats] = mult_comp_wilcox(plot_struct);
     stars = sum(pval(order) < [.05, .01, .005]',1);
     xvals = find(stars);
     stars = stars(xvals);

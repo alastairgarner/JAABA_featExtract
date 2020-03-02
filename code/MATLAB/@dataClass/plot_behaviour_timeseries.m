@@ -15,7 +15,7 @@ function [ax,fig_path] = plot_behaviour_timeseries(obj,params,behaviour,bin_widt
     fr1 = x_lims(1);
     fr2 = x_lims(2);
     
-    tmax = ceil(max(cellfun(@(x) max([x.track_end]),{obj.behaviour}, 'ErrorHandler', @(a,b) nan)));
+    tmax = ceil(max(cellfun(@(x) max([[x.track_end],nan]),{obj.behaviour}, 'ErrorHandler', @(a,b) nan)));
     bins = [0:bin_width:tmax];
     
     x = []; y = []; err_x = []; err_y = {};
