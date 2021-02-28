@@ -18,8 +18,8 @@ clear all; clc;
 %% Load Parameters
 
 
-% parameterFile = 'params_AG.yaml'; 
-parameterFile = 'params_AG_external.yaml';
+parameterFile = 'params_AG.yaml'; 
+% parameterFile = 'params_AG_external.yaml';
 
 paramFile = dir(fullfile('.','**',[parameterFile,'*']));
 params = yaml.ReadYaml(fullfile(paramFile.folder,paramFile.name));

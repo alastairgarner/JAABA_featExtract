@@ -1,17 +1,19 @@
+#
 directories: 
-  master: /home/alastair/projects/JAABA_featExtract
-  code: ./code
+  master: /home/alastair/projects/JAABA_featExtract # working directory
+  code: ./code # code directory
   data: ./data
-  dataprocessed: ./data_processed
-  data_compiled: ./data_compiled
-  chore_input: ./data/choreography_input
-  chore_output: ./data/choreography_results
-  jaaba: ./data/jaaba_results
-  jb: ./data/jb_results
-  salam: ./data/salam_results
+  dataprocessed: ./data_processed # Ignore this
+  data_compiled: ./data_compiled # Output of main_process.m / input of main_analysis.m
+  chore_input: ./data/choreography_input # input directory
+  chore_output: ./data/choreography_results # input directory
+  jaaba: ./data/jaaba_results # input directory
+  jb: ./data/jb_results # input directory
+  salam: ./data/salam_results # input directory
   choreJar_file: ./packages/choreography/Chore.jar
   JAABAclassifiers: ./packages/JAABA/classifiers
   JAABAcore: ./code/JAABA
+
 filetypes:
   blobs: .blob*
   choreography_txt: compiledChore.txt
@@ -19,6 +21,7 @@ filetypes:
   salam: animal_stats*.txt
   jaaba: [trx.mat, scores*.mat]
   jb: trx.mat
+
 config_choreography:
   features: [x, y, speed, midline, curve, cast, crabspeed, area, bias, kink, dir, morpwidth, spine, outline, speed085]
   pval: 0.088
@@ -28,12 +31,15 @@ config_choreography:
   s: 0.1
   runQuiet: false
   overwrite: false
+
 config_JAABA: 
   classifier: roll_moreprecise.jab
   overwrite: false
+
 choreography_default:
   feature_names: [x, y, speed, midline, curve, cast, crabspeed, area, bias, kink, dir, morpwidth, spine, outline, speed085]
   feature_codes: [x, y, s, m, c, c, r, e, b, k, d, M, S, O, s(085)]
+
 tracker: 
   resolution: 1200.0 
   smoothenWindowWidth: 0.1

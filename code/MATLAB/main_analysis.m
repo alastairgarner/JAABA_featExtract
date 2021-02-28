@@ -636,166 +636,166 @@ end
 
 %%
 
-[n_prots,grp_prots] = dc.get_group_numbers('effector','protocol');
-for ii = 1:n_prots
-    idx = grp_prots == ii;
+% [n_prots,grp_prots] = dc.get_group_numbers('effector','protocol');
+% for ii = 1:n_prots
+%     idx = grp_prots == ii;
     
-    [n_exp,grp_exp] = dc(idx).get_group_numbers('driver','effector','protocol');
-    for jj = 1:n_exp
-        ix = find(idx)';
-        f = grp_exp' == jj;
-        ix = ix(f);
-        temp = dc(ix).load_groups(false);
-%         temp = dc(myfilt).load_groups(false);
-        dA = temp.filter_by_size(params.area_cutoff);
-        if isempty(dA.behaviour) | isempty(dA.timeseries) | ~isfield(dA.timeseries,'et')
-            continue
-        end
+%     [n_exp,grp_exp] = dc(idx).get_group_numbers('driver','effector','protocol');
+%     for jj = 1:n_exp
+%         ix = find(idx)';
+%         f = grp_exp' == jj;
+%         ix = ix(f);
+%         temp = dc(ix).load_groups(false);
+% %         temp = dc(myfilt).load_groups(false);
+%         dA = temp.filter_by_size(params.area_cutoff);
+%         if isempty(dA.behaviour) | isempty(dA.timeseries) | ~isfield(dA.timeseries,'et')
+%             continue
+%         end
         
-        p = dA.parse_protocol();
-        frame = p(1).start + [0 p(1).length];
+%         p = dA.parse_protocol();
+%         frame = p(1).start + [0 p(1).length];
         
         
-        Behaviour = 'peran';
-        Metric = 'frequency';
-        Instance = 'first';
-        Method = 'mean';
-        obj = dA;
+%         Behaviour = 'peran';
+%         Metric = 'frequency';
+%         Instance = 'first';
+%         Method = 'mean';
+%         obj = dA;
         
-        f = strcmp({obj.behaviour.behaviour},Behaviour);
+%         f = strcmp({obj.behaviour.behaviour},Behaviour);
         
-        pS = obj.behaviour(f);
-        [~,id_filt] = ismember(pS.uniID,obj.uniID);
-        pS.timestamp = obj.timestamp_index(id_filt);
+%         pS = obj.behaviour(f);
+%         [~,id_filt] = ismember(pS.uniID,obj.uniID);
+%         pS.timestamp = obj.timestamp_index(id_filt);
         
-        filt = pS.track_start < frame(1) & pS.track_end > frame(2);
+%         filt = pS.track_start < frame(1) & pS.track_end > frame(2);
         
-        if any(strcmp(Instance,{'first','last'}))
-            switch Instance
-                case 'first'
-                    func = @(x) min([x(x>frame(1) & x<frame(2));nan]);
-                case 'last'
-                    func = @(x) max([x(x>frame(1) & x<p.frame(2));nan]);
-            end
-            ref = [pS.uniID;pS.start]';
-            [dds,~,uds] = unique(pS.uniID,'stable');
-            val = accumarray(uds,pS.start',[],func);
-            nf = ismember(ref,[dds',val],'rows');
-            filt = filt & nf';
-        end
+%         if any(strcmp(Instance,{'first','last'}))
+%             switch Instance
+%                 case 'first'
+%                     func = @(x) min([x(x>frame(1) & x<frame(2));nan]);
+%                 case 'last'
+%                     func = @(x) max([x(x>frame(1) & x<p.frame(2));nan]);
+%             end
+%             ref = [pS.uniID;pS.start]';
+%             [dds,~,uds] = unique(pS.uniID,'stable');
+%             val = accumarray(uds,pS.start',[],func);
+%             nf = ismember(ref,[dds',val],'rows');
+%             filt = filt & nf';
+%         end
         
-        structFilter = structfun(@(x) numel(x)==numel(filt), pS);
-        pS = structfun(@(x) x(filt), pS,'UniformOutput', false, 'ErrorHandler',@(x,y) NaN);
-        pS.behaviour = obj.behaviour(f).behaviour;
+%         structFilter = structfun(@(x) numel(x)==numel(filt), pS);
+%         pS = structfun(@(x) x(filt), pS,'UniformOutput', false, 'ErrorHandler',@(x,y) NaN);
+%         pS.behaviour = obj.behaviour(f).behaviour;
         
-        [~,~,id] = unique(pS.uniID,'stable');
-        pS.uniID = id';
-        ts = pS.timestamp;
+%         [~,~,id] = unique(pS.uniID,'stable');
+%         pS.uniID = id';
+%         ts = pS.timestamp;
         
-        % Get metric
-        switch Metric
-            case 'duration'
-                val = pS.end - pS.start;
-            case 'start'
-                val = pS.start;
-            case 'end'
-                val = pS.end;
-            case 'frequency'
-                val = pS.frequency;
-            case 'amplitude'
-                val = pS.amplitude;
-        end
+%         % Get metric
+%         switch Metric
+%             case 'duration'
+%                 val = pS.end - pS.start;
+%             case 'start'
+%                 val = pS.start;
+%             case 'end'
+%                 val = pS.end;
+%             case 'frequency'
+%                 val = pS.frequency;
+%             case 'amplitude'
+%                 val = pS.amplitude;
+%         end
         
-        % metric by animal
-        tsIndex = accumarray(id,ts',[],@mean);
-        switch Method
-            case 'all'
-                tot = val';
-            case 'mean'
-                tot = accumarray(id,val',[],@(x) mean(x,'omitnan'));
-            case 'median'
-                tot = accumarray(id,val',[],@(x) median(x,'omitnan'));
-            case 'sum'
-                tot = accumarray(id,val',[],@(x) sum(x,'omitnan'));
-                tot(tot==0) = nan;
-            case 'count'
-                tot = accumarray(id,val',[],@(x) sum(~isnan(x)));
-                tot(tot==0) = nan;
-            case 'proportion'
-                tot = accumarray(id,val',[],@(x) any(~isnan(x)));
-        end
+%         % metric by animal
+%         tsIndex = accumarray(id,ts',[],@mean);
+%         switch Method
+%             case 'all'
+%                 tot = val';
+%             case 'mean'
+%                 tot = accumarray(id,val',[],@(x) mean(x,'omitnan'));
+%             case 'median'
+%                 tot = accumarray(id,val',[],@(x) median(x,'omitnan'));
+%             case 'sum'
+%                 tot = accumarray(id,val',[],@(x) sum(x,'omitnan'));
+%                 tot(tot==0) = nan;
+%             case 'count'
+%                 tot = accumarray(id,val',[],@(x) sum(~isnan(x)));
+%                 tot(tot==0) = nan;
+%             case 'proportion'
+%                 tot = accumarray(id,val',[],@(x) any(~isnan(x)));
+%         end
         
-    end
-end
+%     end
+% end
 
 %%
 
-dc = dataClass(filepaths(contains(filepaths,'choreography'))');
-dc = dc.update_figure_directories(params);
+% dc = dataClass(filepaths(contains(filepaths,'choreography'))');
+% dc = dc.update_figure_directories(params);
 
-clear ax
-[prot_n,prot_grp] = dc.get_group_numbers('protocol');
-for ii = 1:prot_n
-    idx = prot_grp == ii;
-    dct = dc(idx);
+% clear ax
+% [prot_n,prot_grp] = dc.get_group_numbers('protocol');
+% for ii = 1:prot_n
+%     idx = prot_grp == ii;
+%     dct = dc(idx);
     
-    [stamp_n,stamp_grp] = dc(idx).get_group_numbers('timestamp');
-    for jj = 1:stamp_n
-        ix = stamp_grp == jj;
-        try
-            dA = dct(ix).load_groups(true);
-        catch
-            tstamp = dct(ix).get_full_timestamp;
-            update_blacklist({char(tstamp)})
-            continue
-        end
+%     [stamp_n,stamp_grp] = dc(idx).get_group_numbers('timestamp');
+%     for jj = 1:stamp_n
+%         ix = stamp_grp == jj;
+%         try
+%             dA = dct(ix).load_groups(true);
+%         catch
+%             tstamp = dct(ix).get_full_timestamp;
+%             update_blacklist({char(tstamp)})
+%             continue
+%         end
             
-        counts = arrayfun(@(x) numel(x.et), dA.timeseries, 'ErrorHandler', @(a,b) nan);
+%         counts = arrayfun(@(x) numel(x.et), dA.timeseries, 'ErrorHandler', @(a,b) nan);
 
-        et = [dA.timeseries.et];
-        ids = [dA.timeseries.uniID];
-        ids = repelem(ids,1,counts(counts>0));
+%         et = [dA.timeseries.et];
+%         ids = [dA.timeseries.uniID];
+%         ids = repelem(ids,1,counts(counts>0));
 
-        bins = [0:.2:ceil(max(et))];
+%         bins = [0:.2:ceil(max(et))];
 
-        metric = [dA.timeseries.curve];
-        Y = discretize(et,bins);
-        y = accumarray(Y',metric',[numel(bins) 1],@mean);
-        n = accumarray(Y',ids',[numel(bins) 1],@(x) numel(unique(x)));
-        dev = accumarray(Y',metric',[numel(bins) 1],@std);
+%         metric = [dA.timeseries.curve];
+%         Y = discretize(et,bins);
+%         y = accumarray(Y',metric',[numel(bins) 1],@mean);
+%         n = accumarray(Y',ids',[numel(bins) 1],@(x) numel(unique(x)));
+%         dev = accumarray(Y',metric',[numel(bins) 1],@std);
 
-        err = dev./sqrt(n);
-        err(isnan(err)) = 0;
+%         err = dev./sqrt(n);
+%         err(isnan(err)) = 0;
 
-        err_y = [y+err;flipud(y-err)]';
-        err_x = [bins(1:end),fliplr(bins(1:end))];
+%         err_y = [y+err;flipud(y-err)]';
+%         err_x = [bins(1:end),fliplr(bins(1:end))];
 
-        titl = dA.get_full_timestamp;
+%         titl = dA.get_full_timestamp;
         
-        fprintf(strcat(titl,'\n'))
+%         fprintf(strcat(titl,'\n'))
         
-        if ~exist('ax')     
-            title(titl,'Interpreter','none')
-            p = plot(bins(1:end),y,'Color',[0 0 0], 'LineWidth', 2);
-            ylim([0 max(y*3)])
-            pbaspect([2,1,1])
-            dA.plot_stimulation_time(params);
-            ax = gca;
-        else
-            set(p,'XData',bins(1:end),'YData',y)
-            ob = findobj(gca,'Type','Patch');
-            hold on
-            dA.plot_stimulation_time(params);
-            hold off
-        end
+%         if ~exist('ax')     
+%             title(titl,'Interpreter','none')
+%             p = plot(bins(1:end),y,'Color',[0 0 0], 'LineWidth', 2);
+%             ylim([0 max(y*3)])
+%             pbaspect([2,1,1])
+%             dA.plot_stimulation_time(params);
+%             ax = gca;
+%         else
+%             set(p,'XData',bins(1:end),'YData',y)
+%             ob = findobj(gca,'Type','Patch');
+%             hold on
+%             dA.plot_stimulation_time(params);
+%             hold off
+%         end
         
-        res = input('enter value: ','s');
-        if isempty(res)
+%         res = input('enter value: ','s');
+%         if isempty(res)
             
-        elseif strcmp(res,'n')
-            tstamp = dA.get_full_timestamp;
-            update_blacklist({char(tstamp)})
-        end
+%         elseif strcmp(res,'n')
+%             tstamp = dA.get_full_timestamp;
+%             update_blacklist({char(tstamp)})
+%         end
 
-    end 
-end
+%     end 
+% end
