@@ -25,6 +25,7 @@ function filelist_filtered = filterby_contents_file(filelist,contentfile,pipelin
     [types,idx] = dataClass.get_filetype(filelist);
     filelist = filelist(idx);
     [filedeets,err] = dataClass.parse_filepaths(filelist);
+    filelist = filelist(~err);
     filedeets = rmfield(filedeets,["rig"]);
     filedeets = orderfields(filedeets,{'date','time','driver','effector',...
         'protocol1','protocol2','protocol3','protocol4'});
@@ -43,8 +44,12 @@ function filelist_filtered = filterby_contents_file(filelist,contentfile,pipelin
     donefiles = [cellstr(pipelines(r))',repelem([csv{6:end-1}],counts,1)];
 
     % compare lists to generate logical filter
-    filter = ~all(ismember(filesprocess,donefiles),2);
-
+%     filter = ~all(ismember(filesprocess,donefiles),2);
+    filter = ~ismember(...
+        string(filesprocess(:,[1,2,3])),...
+        string(donefiles(:,[1,2,4])),...
+        'rows');
+    
     filelist_filtered = filelist(filter);
 
 end

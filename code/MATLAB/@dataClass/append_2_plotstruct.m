@@ -11,29 +11,51 @@
 % Sep 2019; Last revision: 
 
 %%
-function plot_struct = append_2_plotstruct(obj,plot_struct,params,behaviour,metric,instance,method,frame)
-%     obj = dA;
+function tmpStruct = append_2_plotstruct(obj,plotStruct,params,behaviour,metric,instance,method,frame)
 %     
 %     behaviour = 'rolls';
 %     instance = 'all';
 %     metric = 'duration';
 
-    if numel(fieldnames(plot_struct)) == 0
-        fnames = {'x','y','c','group','timestamp','dates','labels'};
-        fnames = [fnames;repelem({[]},1,numel(fnames))];
-        plot_struct = struct(fnames{:});
-        group = 0;
+    tmpStruct = plotStruct;
+    
+    valName = strcat(behaviour,'_',metric,'_',method,'_',string(frame(1)),'_',string(frame(2)));
+    if numel(fieldnames(tmpStruct))~=0
+        mtch = ismember(string({tmpStruct.name}),valName);
+       if any(mtch)
+           group = max([tmpStruct(mtch).group]);
+       else
+           group = max([tmpStruct.group])-1;
+       end
     else
-        group = max([plot_struct.group,0]);
+        group = 0;
     end
     
+    %%
+    %%%%
     x = []; y = []; c = []; labels = []; timestamps = []; dates = [];
     for xx = 1:numel(obj)
     	f = strcmp({obj(xx).behaviour.behaviour},behaviour);
         if any(f)
             temp = obj(xx).behaviour(f);
             
+            if strcmp(instance,'normalise')
+                prot = obj.parse_protocol();
+                fr = [5 prot(1).start];
+
+                filt = temp.start > fr(1) & temp.start < fr(2);
+                [ids,ia,ic] = unique([temp.uniID]);
+
+                baseline = accumarray(ic(filt),temp.(metric)(filt)',[max(ic),1],@(x) mean(x,'omitnan'));
+                baseline = baseline(ic)';
+                baseline(baseline==0) = nan;
+
+                temp.(metric) = temp.(metric)./baseline;
+            end
+            
             f3 = temp.start > frame(1) & temp.start < frame(2);
+            f3 = f3 | isnan(temp.start);
+%             f3 = repelem(true,1,numel(temp.id));
         elseif strcmp('area',behaviour)
             metric = 'amplitude';
             temp = obj(xx).behaviour(end);
@@ -52,16 +74,18 @@ function plot_struct = append_2_plotstruct(obj,plot_struct,params,behaviour,metr
             temp.amplitude = cellfun(@mean,{obj(xx).timeseries(gd_id).area});
             
             f3 = repelem(true,1,numel(temp.uniID));
+            
         end
         [~,id_filt] = ismember(temp.uniID,obj(xx).uniID);
         temp.timestamp = obj(xx).timestamp_index(id_filt);
         un_dates = double(obj(xx).date(unique(temp.timestamp)));
         [~,~,temp.timestamp] = unique(temp.timestamp,'stable');
-        
+
         %
         f1 = ~isnan(temp.start);
         f2 = temp.track_start < frame(1) & temp.track_end > frame(2);
         filt = f1 & f2 & f3;
+        filt = f2 & f3;
         
         if ~any(f2)
             return
@@ -92,6 +116,7 @@ function plot_struct = append_2_plotstruct(obj,plot_struct,params,behaviour,metr
                 val = accumarray(uds,temp.start',[],func);
                 nf = ismember(ref,[dds',val],'rows');
                 filt = filt & nf';
+                
         end
         
         switch metric
@@ -102,7 +127,9 @@ function plot_struct = append_2_plotstruct(obj,plot_struct,params,behaviour,metr
             case 'end'
                 val = temp.end(filt);
             case 'amplitude'
-                val = temp.amplitude(filt);            
+                val = temp.amplitude(filt);  
+            case 'frequency'
+                val = temp.frequency(filt);  
         end
         
         [~,~,id] = unique(temp.uniID(filt),'stable');
@@ -113,25 +140,31 @@ function plot_struct = append_2_plotstruct(obj,plot_struct,params,behaviour,metr
         ts_i = accumarray(id,ts',[],@mean);
         switch method
             case 'mean'
-                tot = accumarray(id,val',[],@mean);
+%                 tot = accumarray(id,val',[],@mean);
+                tot = accumarray(id,val',[],@(x) mean(x,'omitnan'));
             case 'sum'
-                tot = accumarray(id,val',[],@sum);
+%                 tot = accumarray(id,val',[],@sum);
+                tot = accumarray(id,val',[],@(x) sum(x,'omitnan'));
+                tot(tot==0) = nan;
             case 'count'
-                tot = accumarray(id,1);
+%                 tot = accumarray(id,1);
+                tot = accumarray(id,val',[],@(x) sum(~isnan(x)));
+                tot(tot==0) = nan;
             case 'proportion'
-                counts = accumarray(ts_i,1,[numel(timestamp_n),1]);
-                tot = counts./timestamp_n;
-                tot = repelem(tot',1,counts)';
+%                 counts = accumarray(ts_i,1,[numel(timestamp_n),1]);
+%                 tot = counts./timestamp_n;
+%                 tot = repelem(tot',1,counts)';
+                tot = accumarray(id,val',[],@(x) any(~isnan(x)));
         end
-                
+        
         % metric by timestamp
-        if true
+        if false
             ave_tot = accumarray(ts_i,tot,[numel(timestamp_n),1],@mean,NaN)';
             grp = repelem([xx+group],1,numel(ave_tot));
             tstamps = 1:numel(timestamp_n);
         else
             ave_tot = tot';
-            mtch = strcmp(plot_struct.labels,obj.driver);
+%             mtch = strcmp(tmpStruct.labels,obj.driver);
 %             if plot_struct.group(mtch)
 %                 repelem(mean(plot_struct.group(mtch)),1,numel(ave_tot))
 %             else
@@ -147,12 +180,43 @@ function plot_struct = append_2_plotstruct(obj,plot_struct,params,behaviour,metr
         timestamps = [timestamps tstamps];
         dates = [dates un_dates];
     end
-        
-%     plot_struct.x = [plot_struct.x, x];
-    plot_struct.y = [plot_struct.y, y];
-    plot_struct.group = [plot_struct.group, x];
-    plot_struct.labels = [plot_struct.labels, labels];
-    plot_struct.timestamp = [plot_struct.timestamp, timestamps];
-    plot_struct.dates = [plot_struct.dates, dates];
+    
+    
+    %%
+    valName = strcat(behaviour,'_',metric,'_',method,'_',string(frame(1)),'_',string(frame(2)));
+    
+    if numel(fieldnames(tmpStruct))==0
+        tmpStruct.name = valName;
+        tmpStruct.y = y;
+        tmpStruct.group = x;
+        tmpStruct.labels = labels;
+        tmpStruct.timestamp = timestamps;
+        tmpStruct.dates = dates;
+
+    elseif ~any(ismember(string({tmpStruct.name}),valName))
+        len = numel(tmpStruct)+1;
+        tmpStruct(len).name = valName;
+        tmpStruct(len).y = y;
+        tmpStruct(len).group = x;
+        tmpStruct(len).labels = labels;
+        tmpStruct(len).timestamp = timestamps;
+        tmpStruct(len).dates = dates;
+
+    else
+        ix = ismember(string({tmpStruct.name}),valName);
+        tmpStruct(ix).y = [tmpStruct(ix).y, y];
+        tmpStruct(ix).group = [tmpStruct(ix).group, x];
+        tmpStruct(ix).labels = [tmpStruct(ix).labels, labels];
+        tmpStruct(ix).timestamp = [tmpStruct(ix).timestamp, timestamps];
+        tmpStruct(ix).dates = [tmpStruct(ix).dates, dates];
+
+    end
+    
+    if strcmp(method,'proportion')
+        try
+            tmpStruct(len).y = logical(tmpStruct(len).y);
+        catch
+            tmpStruct(ix).y = logical(tmpStruct(ix).y);
+    end
     
 end

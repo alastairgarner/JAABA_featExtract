@@ -26,6 +26,10 @@ function generate_contents_file(contentfile,pipelines,params)
 
     fullpaths = fullfile({d.folder},{d.name});
     timestamps = regexp(fullpaths,'(\d{8}_\d{6})', 'tokens', 'once');
+    %%%%%%%%%%%%%%%%%%%%%% Edit 6/5/20
+    nonEmpty = ~cellfun(@isempty, timestamps);
+    fullpaths = fullpaths(nonEmpty);
+    %%%%%%%%%%%%%%%%%%%%%%
     timestamps = string([timestamps{:}]);
     [timestamps_sorted,I] = sort(timestamps);
     fullpaths = fullpaths(I);
@@ -42,6 +46,7 @@ function generate_contents_file(contentfile,pipelines,params)
     [file_details,error_files] = dataClass.parse_filepaths(fullpaths_sorted);
     details_cell = struct2cell(file_details)';
     details_cell = details_cell(:,[1,4,3,5,6,7,8,9]);
+%     details_cell = details_cell(:,[1,5,4,2,3,6,7,8,9]);
 
     out_cell = [num2cell(content_out),details_cell]';
 

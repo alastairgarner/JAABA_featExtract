@@ -15,12 +15,12 @@ function [p,h,stats] = mult_comp_wilcox_byday(plot_struct)
     val = plot_struct;
 
     counts = accumarray(val.group',1);
-    means = accumarray(val.group',val.y',[],@(x) mean(x,'omitnan'));
+    ave = accumarray(val.group',val.y',[],@(x) median(x,'omitnan'));
     cells = mat2cell(val.y,1,counts);
     dates = mat2cell(val.dates,1,counts);
      
     v = strcmpi(val.labels,'attp2');
-    means = means(~v);
+    ave = ave(~v);
     labels = val.labels(~v);
     
     f = val.group == find(v);
@@ -36,8 +36,12 @@ function [p,h,stats] = mult_comp_wilcox_byday(plot_struct)
     %         [p,h,stats] = cellfun(@(x) ranksum(cells{v},x),cells);
 %             [p(ii),h(ii),stats(ii)] = ranksum(cells{v},cells{ii});
 %             overlap = ismember(dates{v},dates{ii});
-            [p(ii),h(ii),stats(ii)] = ranksum(cells{v}(overlap),cells{ii},'method','approximate');
-            cval(ii) = max(comps(overlap));
+            nComps = max(comps(overlap));
+            alphaValue = min([0.05/nComps,0.05]);
+%             alphaValue = 0.05/[numel(cells)-1];
+            [p(ii),h(ii),stats(ii)] = ranksum(cells{v}(overlap),cells{ii},'alpha',alphaValue,'method','approximate');
+%             [p(ii),h(ii),stats(ii)] = ranksum(cells{v}(overlap),cells{ii},'method','approximate');
+            cval(ii) = nComps;            
         else
             p(ii) = 1;
             h(ii) = false;

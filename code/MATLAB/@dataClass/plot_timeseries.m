@@ -17,14 +17,21 @@ function [ax,fig_path] = plot_timeseries(obj,params,feature,frame_start,frame_en
     calc = calculation;
     cmap = colormap;
     
+    linestyle = repelem({'-'},size(cmap,1));
+    [~,~,ic] = unique(cmap, 'rows', 'stable');
+    linestyle([false; diff(ic)==0]') = {':'};
+        
     for xx = 1:numel(obj)
         data = obj(xx);
         if numel(fieldnames(data.timeseries)) == 0 | ~numel(data.timeseries)
             ax = [];
-            figure_path = [];
+            fig_path = [];
             continue
         end
         counts = arrayfun(@(x) numel(x.et), data.timeseries, 'ErrorHandler', @(a,b) nan);
+        
+        cellDiff = cellfun(@(x,y) x-y,{data.timeseries.speed},{data.timeseries.crabspeed}, 'UniformOutput', false);
+        [data.timeseries.speeddiff] = cellDiff{:};
         
         switch calc
             case "norm"
@@ -55,10 +62,16 @@ function [ax,fig_path] = plot_timeseries(obj,params,feature,frame_start,frame_en
         err_x = [bins(1:end),fliplr(bins(1:end))];
 
         hold on
-        plot(bins(1:end),y,'Color',cmap(xx,:), 'LineWidth', 2, 'Tag', string(xx))
+        plot(bins(1:end),y,linestyle{xx},'Color',cmap(xx,:), 'LineWidth', 3, 'Tag', string(xx))
         patch(err_x,err_y,cmap(xx,:),'EdgeColor','none','FaceAlpha',.3);
         hold off
         
+    end
+    
+    if isempty(findobj('Type','Figure'))
+        ax = [];
+        fig_path = [];
+        return
     end
 
     % fix Z order
@@ -72,14 +85,17 @@ function [ax,fig_path] = plot_timeseries(obj,params,feature,frame_start,frame_en
     ylim(y_limits)
     ylabel(strcat(feature," ",calc));
     xlabel("Time (s)")
-    pbaspect([2,1,1])
+    pbaspect([3,1,1])
     
     %
     obj(1).plot_stimulation_time(params);
     %
     disp_names = {obj.driver};
+    if numel(unique(cellstr(disp_names))) < numel(disp_names)
+        disp_names = strcat(string({obj.driver}),' > ',string({obj.effector}));
+    end
     disp_names = cellfun(@(x) strrep(x,'GMR_',''), disp_names,'UniformOutput', false);
-
+    
     relative_position = [.7 1.05 .3 .2];
     plts = findobj(gca,'Type','Line');
 %     flexi_legend(flipud(plts),disp_names,'RelativePosition',relative_position,'Interpreter', 'none','Box','off');
@@ -89,13 +105,13 @@ function [ax,fig_path] = plot_timeseries(obj,params,feature,frame_start,frame_en
     % set up save name and path 
     figure_dir = obj.figure_directory;
     fig_type = strcat("timeseries_",feature,"_",calc);
-%     fname = strcat(obj(end).get_full_genotype,".pdf");
-    fname = strcat(obj(end).get_full_genotype);
+    fname = strcat(obj(end).get_full_genotype());
 
-
-    fig_path = fullfile(figure_dir,fig_type,fname);
+    fig_path = fullfile(figure_dir,'byDay',fname,fig_type);
+    if ~isdir(fileparts(fig_path))
+        mkdir(fileparts(fig_path));
+    end
 
     ax = gca;
-    addlistener(ax,'Position','PostSet',@(~,~) fprintf('Change detected'));
     
 end

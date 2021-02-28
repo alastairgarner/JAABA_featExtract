@@ -77,7 +77,7 @@ function [ax,fig_path] = plot_behaviour_timeseries(obj,params,behaviour,bin_widt
     
     hold on
     for ii = 1:size(x,1)
-        plot(x(ii,:),y(ii,:),'Color',cmap(ii,:), 'LineWidth', 2)
+        plot(x(ii,:),y(ii,:),'Color',cmap(ii,:), 'LineWidth', 3)
         patch(err_x(ii,:),err_y(ii,:),cmap(ii,:),'EdgeColor','none','FaceAlpha',.3);
     end
     hold off
@@ -103,6 +103,9 @@ function [ax,fig_path] = plot_behaviour_timeseries(obj,params,behaviour,bin_widt
     obj(1).plot_stimulation_time(params);
     %
     disp_names = {obj.driver};
+    if numel(unique(cellstr(disp_names))) < numel(disp_names)
+        disp_names = strcat(string({obj.driver}),' > ',string({obj.effector}));
+    end
     disp_names = cellfun(@(x) strrep(x,'GMR_',''), disp_names,'UniformOutput', false);
 
     relative_position = [.7 1.05 .3 .2];
@@ -112,11 +115,13 @@ function [ax,fig_path] = plot_behaviour_timeseries(obj,params,behaviour,bin_widt
     
     % set up save name and path 
     figure_dir = obj.figure_directory;
-    fig_type = strcat("beh_timeseries_",behaviour{:});
-%     fname = strcat(obj(end).get_full_genotype,".pdf");
+    fig_type = strcat("timeseries_",behaviour{:});
     fname = strcat(obj(end).get_full_genotype);
 
-    fig_path = fullfile(figure_dir,fig_type,fname);
+    fig_path = fullfile(figure_dir,'byDay',fname,fig_type);
+    if ~isdir(fileparts(fig_path))
+        mkdir(fileparts(fig_path));
+    end
 
     ax = gca;
     

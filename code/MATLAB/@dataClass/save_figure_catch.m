@@ -21,9 +21,11 @@ if ~isempty(ax) & ~isempty(figure_path)
     set(gcf, 'InvertHardCopy', 'off',...
         'PaperPositionMode', 'auto',...
         'Color', [1 1 1]);
-        
+    
+    shrink_fig2axes(gcf)
+    
     print(gcf,figure_path,'-dsvg','-painters');
-    savefig(figure_path);
+%     savefig(figure_path);
 %     print(gcf,figure_path,'-dpdf','-painters','-fillpage');
 else
     fprintf("no figure to save \n")

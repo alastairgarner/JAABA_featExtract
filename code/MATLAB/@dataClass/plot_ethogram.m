@@ -85,7 +85,7 @@ function [ax,fig_path] = plot_ethogram(obj,params,behaviours_cell,frame_start,fr
         y = repmat(ids(f)'+ofs,2,1);
         x = [starts(f); ends(f)];
 
-        plot(x,y,'Color', cols(ii,:),'LineWidth',2)
+        line(x,y,'Color', cols(ii,:),'LineWidth',2)
         hold on
     end
     hold off
@@ -93,7 +93,8 @@ function [ax,fig_path] = plot_ethogram(obj,params,behaviours_cell,frame_start,fr
     pbaspect([1,2,1])
     xlim([fr1 fr2])
     ylim([0 max(ids)*1.04])
-    set(gca,'YTickLabel',[],'TickLength',[0,0])
+    set(gca,'YTickLabel',[],'TickLength',[0,0]);
+    title(strrep(obj.driver,'GMR_',''),'Interpreter','none');
     
     %
     obj(1).plot_stimulation_time(params);

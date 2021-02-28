@@ -13,13 +13,13 @@
 %% User settings
 clear all; clc;
 
-search_term = "20170818";
+% search_term = "/2017";
 
 %% Load Parameters
 
 
 % parameterFile = 'params_AG.yaml'; 
-parameterFile = 'params_AG_external.yaml'; 
+parameterFile = 'params_AG_external.yaml';
 
 paramFile = dir(fullfile('.','**',[parameterFile,'*']));
 params = yaml.ReadYaml(fullfile(paramFile.folder,paramFile.name));
@@ -32,7 +32,7 @@ addpath(fullfile(params.directories.code,'MATLAB'))
 
 contentfile = "contents.csv";
 pipelines = ["mwt","choreography","salam","jaaba","jb"];
-overwrite = true;
+overwrite = false;
 
 %%
 
@@ -40,8 +40,10 @@ fprintf('\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n');
 
 file_structure = dataContainer.get_files(params);
 fullpaths = fullfile({file_structure.folder},{file_structure.name});
-search_filt = contains(fullpaths,search_term);
-fullpaths = fullpaths(search_filt);
+if exist('search_term')
+    search_filt = contains(fullpaths,search_term);
+    fullpaths = fullpaths(search_filt);
+end
 if ~overwrite
     fullpaths = dataClass.filterby_contents_file(fullpaths,"contents.csv",pipelines,params);
 end
@@ -81,9 +83,12 @@ timestamps = string([timestamps{:}]);
     
 %% Version 2
 
-dc = dataClass(fullpaths);
+% fpath = '/home/alastair/projects/JAABA_featExtract/downloads/20200824_0040/jb-reduced/t93/attp2@UAS_Chrimson_attp18_72F11/r_LED30_30s2x15s30s#n#n#n@100/20181130_170329/trx.mat'
+% dc = dataClass({fpath});
+% dc = dc.load_data()
+% dc.compile_data()
 
-% dataClass.generate_contents_file(contentfile,pipelines,params)
+dc = dataClass(fullpaths);
 
 contentfile = "contents.csv";
 pipelines = ["mwt","choreography","salam","jaaba","jb"];
@@ -105,4 +110,7 @@ for ii = 1:numel(dc)
 end
 
 
-find(cellfun(@(x) any(contains(x,"jaaba")), {dc.filepath}))
+% find(cellfun(@(x) any(contains(x,"jaaba")), {dc.filepath}))
+
+
+

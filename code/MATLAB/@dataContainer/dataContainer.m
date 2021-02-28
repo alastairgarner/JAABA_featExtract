@@ -443,7 +443,6 @@ classdef dataContainer
             tokens = cellfun(@(x) string([x{:}]), tokens, 'UniformOutput',false);
             beh_code = cellfun(@(x) strcat(x{:}),tokens, 'UniformOutput', false);
 
-
             obj_arr = [];
             for ii = 1:length(beh_type)
                 len = length(trx(1).(beh_type{ii}));

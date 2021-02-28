@@ -18,6 +18,7 @@ function plot_stimulation_time(obj,params)
     asp = get(gca,'PlotBoxAspectRatio');
 
     col = {[255 79 0];[170 220 215]};
+    col = {[225 114 98];[170 220 215]};
 
     fnames = fieldnames(obj);
     fnames = fnames(startsWith(fnames,"protocol"));

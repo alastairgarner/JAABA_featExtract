@@ -32,12 +32,20 @@ function one_dataClass = merge_dataClasses(obj)
 
         % merge choreography data
         if strcmp(pipes{ii},'choreography')
-            temp = vertcat(dca(f).timeseries);
+            f = find(f); % EDIT 20200302
+            ff = cellfun(@(x) numel(fieldnames(x)),{dca(f).timeseries}) ~= 0; % EDIT 20200302
+            temp = vertcat(dca(f(ff)).timeseries);
             dca_new(ii,1).timeseries = temp;
         % merge salam/jaaba/jb data
         elseif any(strcmp(pipes{ii},{'salam','jaaba','jb'}))
+            f = find(f); % EDIT 20200302
+            ff = cellfun(@(x) numel(fieldnames(x)),{dca(f).behaviour}) ~= 0; % EDIT 20200302
+%             behs = vertcat(dca(f).behaviour); % EDIT 20200302
+            behs = vertcat(dca(f(ff)).behaviour);
+            if isempty(behs)
+                continue
+            end
             
-            behs = vertcat(dca(f).behaviour);
             [C,~,ic] = unique({behs.behaviour});
             % loop through behaviours
             for jj = 1:numel(C)

@@ -90,6 +90,7 @@ function [ax,fig_path] = plot_ridgeline_timeseries(obj,params,feature,frame_star
     ylim([0 max_y*1.04])
     ylabel(feature)
     xlabel('Time (s)')
+    title(strrep(obj.driver,'GMR_',''),'Interpreter','none');
     pbaspect([1,2,1])
     
     %

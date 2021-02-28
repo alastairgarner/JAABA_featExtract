@@ -67,34 +67,6 @@ classdef dataClass
     
     %% METHODS NORMAL
     methods
-%         %% dataClass Constructor
-%         function obj = dataClass(filepaths)
-%             if nargin ~= 0
-%                 [split_filepaths,names,exts] = cellfun(@(x) fileparts(x),filepaths,'UniformOutput', false);
-%                 [unique_filepaths,~,indicies] = unique(split_filepaths,'stable');
-% %                 issalam = contains(names, "animal_stats");
-% %                 indicies(issalam) = nan;
-%                 [unique_filepaths,~,indicies] = unique(indicies);
-%                 
-%                 elems = numel(unique_filepaths);
-%                 obj(elems,1) = dataClass();
-%                 % 
-%                 for ii = 1:numel(unique_filepaths)
-%                     idx = indicies == ii;
-%                     obj(ii).filepath = string(filepaths(idx))';
-%                     temp = dataContainer.parse_filepaths(filepaths(idx));
-%                     % merge struct to object
-%                     for fn = fieldnames(temp)'    %enumerat fields
-%                         try
-%                           obj(ii).(fn{1}) = temp.(fn{1});   %and copy
-%                         catch
-%                           warning('Could not copy field %s', fn{1});
-%                         end
-%                     end
-%                 end
-%             end
-%         end
-
         %% dataClass Constructor
         function obj = dataClass(filepaths)
             if nargin ~= 0
@@ -115,7 +87,7 @@ classdef dataClass
                     idx = indicies == ii;
                     obj(ii).filepath = string(filepaths(idx))';
                     obj(ii) = obj(ii).update_pipeline();
-                    temp = dataContainer.parse_filepaths(filepaths(idx));
+                    temp = dataClass.parse_filepaths(filepaths(idx));
                     % merge struct to object
                     for fn = fieldnames(temp)'    %enumerat fields
                         try
@@ -194,46 +166,6 @@ classdef dataClass
                 obj = obj.load_jbdata();
             end
         end
-        
-        %% Load data
-%         function obj = load_data(obj)
-%             for ii = 1:numel(obj.filepath)
-%                 [fold,name,ext] = fileparts(obj.filepath(ii));
-%                 if startsWith(ext,".blo")
-%                     obj.pipeline = "mwt";
-%                     obj = obj.load_blobsdata();
-%                     return
-%                 elseif startsWith(ext,".txt")
-% 
-%                     if contains(lower(name),"chore")
-%                         obj.pipeline = "choreography";
-%                         obj = obj.load_choredata();
-%                         return
-%                     elseif contains(lower(name),"animal_stats")
-%                         obj.pipeline = "salam";
-%                         obj = obj.load_salamdata();
-%                         return
-%                     end
-% 
-%                 elseif startsWith(ext,".mat")
-% 
-%                     if contains(name,"trx")
-%                         file_check = dir(fold);
-%                         if any({file_check.name} == "perframe")
-%                             obj.pipeline = "jaaba";
-%                             obj = obj.load_jaabadata();
-%                             return
-%                         else
-%                             obj.pipeline = "jb";
-%                             obj = obj.load_jbdata();
-%                             return
-%                         end
-%                     else
-%                         obj = obj.load_compileddata();
-%                     end
-%                 end
-%             end
-%         end
         
         %% Load blobs data
         function obj = load_compileddata(obj)
@@ -552,6 +484,10 @@ classdef dataClass
             obj.aniID = [temp.trx.id];
 %             [~,~,uniID] = unique(obj.aniID,'stable');
 %             obj.uniID = uniID';
+            if ~any(contains(fieldnames(temp),'allScores'))
+                fprintf('\t\t ...no jaaba "allScores" file\n')
+                return
+            end
             obj.track_start = timestamps(temp.allScores.tStart);
             obj.track_end = timestamps(temp.allScores.tEnd);
 
@@ -592,22 +528,55 @@ classdef dataClass
             trx = obj.raw_data.trx;
 
             obj.aniID = [trx.numero_larva_num];
-%             [~,~,uniID] = unique(obj.aniID,'stable');
-%             obj.uniID = uniID';
             obj.track_start = arrayfun(@(x) min(x.t), trx)';
             obj.track_end = arrayfun(@(x) max(x.t), trx)';
 
-            beh_name = {'run','cast','stop','hunch','back','roll','beh7','beh8','beh9','beh10','beh11','beh12'};
+            beh_name = {'run','cast','stop','hunch','back','roll'};
             beh_type = {'t_start_stop',...
-                't_start_stop_large',...
                 't_start_stop_large_small'};
-            beh_type = {'t_start_stop'};
 
+            beh_type = beh_type(ismember(beh_type,fieldnames(trx)));
+            
+            if find(contains(beh_type,'t_start_stop_large_small'))
+                cells = {trx.t_start_stop_large_small};
+                
+                t_start_stop_weak = cellfun(@(x) x(1:2:12), cells, 'UniformOutput', false);
+                t_start_stop_strong = cellfun(@(x) x(2:2:12), cells, 'UniformOutput', false);
+                
+                [trx.t_start_stop_weak] = t_start_stop_weak{:};
+                [trx.t_start_stop_strong] = t_start_stop_strong{:};
+                
+                beh_type = beh_type(~strcmp(beh_type,'t_start_stop_large_small'));
+                beh_type = [beh_type,'t_start_stop_weak','t_start_stop_strong'];
+            end
+            
             tokens = regexp(beh_type,'(^\w)|[_](\w)','tokens');
-            tokens = cellfun(@(x) string([x{:}]), tokens, 'UniformOutput',false);
-            beh_code = cellfun(@(x) strcat(x{:}),tokens, 'UniformOutput', false);
+            beh_code = cellfun(@(x) strcat(x{:}), tokens);
+            
+            %%%%% edit 26/08/20
+            extra_behs = {'head_wiggle','wiggling'};
+            for ii = 1:numel(extra_behs)
+                if ismember(extra_behs{ii},fieldnames(trx))
+                    vect_beh = {trx.(extra_behs{ii})};
+                    vect_beh = cellfun(@(x) x>0, vect_beh, 'UniformOutput', false);
+                    
+                    starts = cellfun(@(x) find(diff([0,x']) > 0), vect_beh, 'UniformOutput', false);
+                    stops = cellfun(@(x) find(diff([x',0]) < 0), vect_beh, 'UniformOutput', false);
+                    
+%                     vect_beh{jj}'
+%                     for jj = 1:numel(starts)
+%                         [starts{jj};stops{jj}]
+%                     end
 
-
+                    beh_cell = cellfun(@(t,x,y) t([x;y])', {trx.t}, starts, stops, 'UniformOutput', false);
+                    
+                    ff = arrayfun(@(x,y) [x{:},y], {trx.t_start_stop}, beh_cell, 'UniformOutput', false);
+                    [trx.t_start_stop] = ff{:};
+                end
+                beh_name = [beh_name, extra_behs{ii}];
+            end
+            %%%%%
+            
             obj_arr = [];
             for ii = 1:length(beh_type)
                 len = length(trx(1).(beh_type{ii}));
@@ -796,6 +765,8 @@ classdef dataClass
         
         plot_struct = append_2_plotstruct(obj,plot_struct,params,behaviour,metric,instance,method,frame)
         
+        plotStructUpdated = append_choreography_metric(obj,plotStruct,feature,metric,frame,instance)
+        
         data_array = get_behaviour_data(obj,behaviour,params)
 
         obj = filter_by_size(obj,area_threshold)
@@ -923,6 +894,16 @@ classdef dataClass
                 '[#](?<protocol3>[\w\d\_]+)'...
                 '[#](?<protocol4>[\w\d\_]+)'...
                 '|'...
+                '[\@\\\/](?<driver>\w+)'...
+                '[\@](?<effector>\w+)'...
+                '[\@\\\/](?<rig>t\d+)'...
+                '[\@\\\/](?<protocol1>[\w\d\_]+)'...
+                '[#](?<protocol2>[\w\d\_]+)'...
+                '[#](?<protocol3>[\w\d\_]+)'...
+                '[#](?<protocol4>[\w\d\_]+)',...
+                '[\@\\\/](?<date>\d\d\d\d\d\d\d\d)'...
+                '[\_](?<time>\d\d\d\d\d\d)'...
+                '|'...
                 '[\@\\\/](?<rig>t\d+)'...
                 '[\@\\\/](?<driver>\w+)'...
                 '[\@](?<effector>\w+)'...
@@ -985,6 +966,8 @@ classdef dataClass
         filelist_filtered = filterby_contents_file(filelist,contentfile,pipelines,params);
         
         [ax,figure_path] = plot_grouped_beeswarm(obj,plot_struct,sorted,normalise_control_tf,control_genotype,highlight_genotype,y_label)
+        
+        [ax,figure_path,stats] = plot_violins(obj,plot_struct,sortOrder,normalise_control_tf,control_driver,highlight_driver,y_label)
         
         save_figure_catch(ax,figure_path);
         

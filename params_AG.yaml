@@ -1,5 +1,5 @@
 directories: 
-  master: /home/alastair/OneDrive/projects/JAABA_featExtract
+  master: /home/alastair/projects/JAABA_featExtract
   code: ./code
   data: ./data
   dataprocessed: ./data_processed
@@ -17,7 +17,7 @@ filetypes:
   choreography_txt: compiledChore.txt
   choreography_dat: .dat
   salam: animal_stats*.txt
-  jaaba: [trx.mat, scores*short.mat]
+  jaaba: [trx.mat, scores*.mat]
   jb: trx.mat
 config_choreography:
   features: [x, y, speed, midline, curve, cast, crabspeed, area, bias, kink, dir, morpwidth, spine, outline, speed085]
@@ -29,7 +29,7 @@ config_choreography:
   runQuiet: false
   overwrite: false
 config_JAABA: 
-  classifier: roll_beg_short.jab
+  classifier: roll_moreprecise.jab
   overwrite: false
 choreography_default:
   feature_names: [x, y, speed, midline, curve, cast, crabspeed, area, bias, kink, dir, morpwidth, spine, outline, speed085]
